@@ -55,6 +55,9 @@ sudo systemctl restart nginx
 '''
 ec2 = boto3.client('ec2')
 
+#define a empty list to store running instances
+InstanceIds=[]
+#function to create instance 
 def create_EC2_instance():
     # Create an EC2 client
     ec2 = boto3.client('ec2', region_name=region_name)
@@ -86,8 +89,14 @@ def create_EC2_instance():
 
     # Launch the EC2 instance
    # instance_response = ec2.run_instances(**instance_params)
-    instance_id = response['Instances'][0]['InstanceId']
-    print(f"EC2 instance with ID {instance_id} launched successfully.")
+    if response['ResponseMetadata']['HTTPStatusCode'] == 200:
+        instance_id = response['Instances'][0]['InstanceId']
+        ec2.get_waiter('instance_running').wait(
+                InstanceIds.append(instance_id)
+            )
+        print(f"EC2 instance with ID {instance_id} launched successfully.")
+    else:
+        print('error occurs while creating instance please try again')
     #Define a waiter to wait for the instance to reach the "running" state
     instance_running_waiter = ec2.get_waiter('instance_running')
     # Set a longer wait time (e.g., 300 seconds)
@@ -99,9 +108,78 @@ def create_EC2_instance():
 
 
 # function call to launch instance 
-create_EC2_instance()
+#create_EC2_instance()
 # Define a waiter to wait for the instance to reach the "running" state
-#instance_running_waiter = ec2.get_waiter('instance_running')
+#time.sleep(100)
 
+
+#Load balancing part 
+def create_alb():
+    client = boto3.client('elbv2', region_name=region_name)
+    
+    # Define ALB parameters
+    alb_params = {
+        'Name': 'my-alb',  # Replace with your ALB name
+        'Subnets': ['subnet-0e79495817e1b9130', 'subnet-0698d439e10bd8b1c' , 'subnet-01059ecc73324ffd1'],  # Replace with your subnet IDs
+        'SecurityGroups': ['sg-078ec58c53614eba1'],  # Replace with your security group IDs
+        'Scheme': 'internet-facing',  # Replace with 'internal' for internal ALB
+        'IpAddressType': 'ipv4',  # Replace with 'dualstack' for IPv6 support
+        'Tags': [{'Key': 'Name', 'Value': 'my-alb'}]  # Replace with additional tags as needed
+    }
+    
+    # Create ALB
+    alb_response = client.create_load_balancer(**alb_params)
+    alb_arn = alb_response['LoadBalancers'][0]['LoadBalancerArn']
+    print("ALB created successfully:", alb_arn)
+    
+    # Define target group parameters
+    target_group_params = {
+        'Name': 'my-target-group',  # Replace with your target group name
+        'Protocol': 'HTTP',  # Replace with your desired protocol
+        'Port': 80,  # Replace with your desired port
+        'VpcId': 'vpc-06b1320d527910a58',  # Replace with your VPC ID
+        'HealthCheckProtocol': 'HTTP',  # Replace with your desired health check protocol
+        'HealthCheckPort': str(80),  # Replace with your desired health check port
+        'HealthCheckPath': '/',  # Replace with your desired health check path
+        #'TargetType': 'instance',  # Replace with 'ip' or 'lambda' if needed
+        
+    }
+    
+    # Create target group
+    target_group_response = client.create_target_group(**target_group_params)
+    target_group_arn = target_group_response['TargetGroups'][0]['TargetGroupArn']
+    print("Target group created successfully:", target_group_arn)
+    
+    
+
+    # Register ec2 instance with the target
+
+    instance_ids = ['i-00a4d65741d135b58']  # Replace with your EC2 instance IDs
+    target_group_attachment_params = {
+        'TargetGroupArn': target_group_arn,
+        'Targets': [{'Id': instance_id} for instance_id in instance_ids]
+    }
+    client.register_targets(**target_group_attachment_params)
+    print("EC2 instances registered with target group successfully")
+    
+    # Define listener parameters
+    listener_params = {
+        'LoadBalancerArn': alb_arn,
+        'Protocol': 'HTTP',  # Replace with your desired protocol
+        'Port': 80,  # Replace with your desired port
+        'DefaultActions': [
+            {
+                'Type': 'forward',
+                'TargetGroupArn': target_group_arn
+            },
+        ]
+    }
+    
+    # Create listener
+    client.create_listener(**listener_params)
+    print("Listener created successfully")
+
+#Function call to create ALB
+create_alb()
 
 
