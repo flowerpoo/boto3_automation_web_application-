@@ -23,7 +23,7 @@ def create_s3_bucket(bucket_name):
     
 bucket_name = 'first-bucket-poo-web'
 #function call to create bucket 
-#create_s3_bucket(bucket_name)
+print(create_s3_bucket(bucket_name))
 
 # upload file in the bucket
 file_path= 'C:\\Users\\Asus\\OneDrive\\Desktop\\web application boto3 automation\\boto3_automation_web_application-\\index.html'
@@ -37,7 +37,7 @@ def upload_to_s3_bucket(bucket_name):
         print(f"Error uploading file to S3: {e}")
         return False
 #function call to upload static file in the bucket     
-#upload_to_s3_bucket(bucket_name)
+upload_to_s3_bucket(bucket_name)
 
 
 # function to create ec2 instance 
@@ -108,9 +108,9 @@ def create_EC2_instance():
 
 
 # function call to launch instance 
-#create_EC2_instance()
+print(create_EC2_instance())
 # Define a waiter to wait for the instance to reach the "running" state
-#time.sleep(100)
+time.sleep(100)
 
 
 #Load balancing part 
@@ -184,7 +184,7 @@ def create_alb():
     print("Listener created successfully")
 
 #Function call to create ALB
-#print(create_alb())
+print(create_alb())
 
 
 #ASG configuration 
@@ -248,7 +248,7 @@ def create_asg():
     print("Scale in policy created successfully")
 
 #function call for asg config
-#print(create_asg())
+print(create_asg())
 
 
 #Loggs and monitors 
@@ -288,10 +288,5 @@ def configure_alb_access_logs(alb_arn, s3_bucket_name):
 
 
 # Configure ALB access logs function call
-configure_alb_access_logs(alb_arn, s3_bucket_name)
-
-bucket_name = 'log-bucket11'
-#function call to create a bucket 
-buc=create_s3_bucket(bucket_name)
-print(buc)
+print(configure_alb_access_logs(alb_arn, s3_bucket_name))
 
